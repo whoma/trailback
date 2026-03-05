@@ -1,0 +1,89 @@
+.panel {
+  position: absolute;
+  top: calc(var(--safe-top) + 50px);
+  left: 16px;
+  right: 16px;
+  z-index: 1000;
+  background: var(--bg-panel);
+  border-radius: var(--radius);
+  padding: 16px;
+  backdrop-filter: blur(10px);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.title {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--success);
+}
+
+.stopBtn {
+  background: var(--danger);
+  color: white;
+  border: none;
+  padding: 6px 14px;
+  border-radius: 8px;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.info {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+
+.compass {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  background: rgba(79, 109, 245, 0.15);
+  border: 2px solid var(--primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.arrow {
+  width: 0;
+  height: 0;
+  border-left: 10px solid transparent;
+  border-right: 10px solid transparent;
+  border-bottom: 28px solid var(--primary);
+  transition: transform 0.3s ease;
+}
+
+.details {
+  font-size: 15px;
+  line-height: 1.8;
+}
+
+.distance {
+  font-weight: 600;
+  font-size: 18px;
+}
+
+.remaining {
+  color: var(--text-dim);
+  font-size: 13px;
+}
+
+.arrived {
+  color: var(--success);
+  font-weight: 600;
+  font-size: 14px;
+  animation: blink 1s infinite;
+}
+
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
