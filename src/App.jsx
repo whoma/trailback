@@ -6,8 +6,9 @@ import BacktrackPanel from './components/BacktrackPanel';
 import HistoryPanel from './components/HistoryPanel';
 import SaveDialog from './components/SaveDialog';
 import { useGeolocation } from './hooks/useGeolocation';
+import { useWakeLock } from './hooks/useWakeLock';
 import { getDistance, getTotalDistance } from './utils/geo';
-import { getSavedRoutes, saveRoute, deleteRoute } from './utils/storage';
+import { getSavedRoutes, saveRoute, deleteRoute, getSavedPin, savePin, deletePin } from './utils/storage';
 import './App.css';
 
 const MIN_DISTANCE = 3; // minimum meters between recorded points
@@ -18,16 +19,21 @@ export default function App() {
     position,
     accuracy,
     heading,
+    speed,
     startWatching,
     stopWatching,
     requestOrientationPermission,
   } = useGeolocation();
 
+  const { requestWakeLock, releaseWakeLock } = useWakeLock();
+
   const [recording, setRecording] = useState(false);
+  const [paused, setPaused] = useState(false);
   const [path, setPath] = useState([]);
   const [totalDistance, setTotalDistance] = useState(0);
   const [startTime, setStartTime] = useState(null);
   const [elapsed, setElapsed] = useState(0);
+  const [elapsedAtPause, setElapsedAtPause] = useState(0);
 
   const [showHistory, setShowHistory] = useState(false);
   const [showSaveDialog, setShowSaveDialog] = useState(false);
@@ -36,25 +42,32 @@ export default function App() {
   const [backtracking, setBacktracking] = useState(false);
   const [backtrackRoute, setBacktrackRoute] = useState(null);
   const [backtrackIndex, setBacktrackIndex] = useState(0);
+  const [backtrackArrived, setBacktrackArrived] = useState(false);
 
   // View-only mode (show a saved route on map)
   const [viewPath, setViewPath] = useState(null);
 
+  // Auto-follow mode
+  const [autoFollow, setAutoFollow] = useState(false);
+
+  // Car pin
+  const [carPin, setCarPin] = useState(() => getSavedPin());
+
   const mapRef = useRef(null);
   const pendingPathRef = useRef([]);
 
-  // Timer for elapsed time
+  // Timer for elapsed time (pauses when paused)
   useEffect(() => {
-    if (!recording || !startTime) return;
+    if (!recording || paused || !startTime) return;
     const interval = setInterval(() => {
-      setElapsed(Date.now() - startTime);
+      setElapsed(elapsedAtPause + (Date.now() - startTime));
     }, 1000);
     return () => clearInterval(interval);
-  }, [recording, startTime]);
+  }, [recording, paused, startTime, elapsedAtPause]);
 
-  // Record positions into path
+  // Record positions into path (skip when paused)
   useEffect(() => {
-    if (!recording || !position) return;
+    if (!recording || paused || !position) return;
 
     const currentPath = pendingPathRef.current;
     if (currentPath.length === 0) {
@@ -70,20 +83,28 @@ export default function App() {
       setPath([...currentPath]);
       setTotalDistance(getTotalDistance(currentPath));
     }
-  }, [recording, position]);
+  }, [recording, paused, position]);
 
-  // Auto-advance backtrack waypoint
+  // Auto-advance backtrack waypoint with vibration
   useEffect(() => {
-    if (!backtracking || !position || !backtrackRoute) return;
+    if (!backtracking || !position || !backtrackRoute || backtrackArrived) return;
 
     const target = backtrackRoute[backtrackIndex];
     if (!target) return;
 
     const dist = getDistance(position, target);
-    if (dist < BACKTRACK_ARRIVE_DISTANCE && backtrackIndex < backtrackRoute.length - 1) {
-      setBacktrackIndex((i) => i + 1);
+    if (dist < BACKTRACK_ARRIVE_DISTANCE) {
+      if (backtrackIndex < backtrackRoute.length - 1) {
+        // Reached intermediate waypoint - short vibration
+        if (navigator.vibrate) navigator.vibrate(200);
+        setBacktrackIndex((i) => i + 1);
+      } else {
+        // Reached final destination - celebration vibration
+        if (navigator.vibrate) navigator.vibrate([200, 100, 200, 100, 400]);
+        setBacktrackArrived(true);
+      }
     }
-  }, [backtracking, position, backtrackRoute, backtrackIndex]);
+  }, [backtracking, position, backtrackRoute, backtrackIndex, backtrackArrived]);
 
   // Center map on backtrack target changes
   useEffect(() => {
@@ -96,28 +117,45 @@ export default function App() {
 
   const handleToggleRecord = useCallback(() => {
     if (recording) {
-      // Stop recording
-      setRecording(false);
-      if (pendingPathRef.current.length >= 2) {
-        setShowSaveDialog(true);
+      if (paused) {
+        // Resume recording
+        setPaused(false);
+        setStartTime(Date.now());
       } else {
-        pendingPathRef.current = [];
-        setPath([]);
-        setTotalDistance(0);
+        // Pause recording
+        setPaused(true);
+        setElapsedAtPause(elapsed);
       }
     } else {
       // Start recording
       startWatching();
       requestOrientationPermission();
+      requestWakeLock();
       pendingPathRef.current = [];
       setPath([]);
       setTotalDistance(0);
       setStartTime(Date.now());
       setElapsed(0);
+      setElapsedAtPause(0);
+      setPaused(false);
       setRecording(true);
+      setAutoFollow(true);
       setViewPath(null);
     }
-  }, [recording, startWatching, requestOrientationPermission]);
+  }, [recording, paused, elapsed, startWatching, requestOrientationPermission, requestWakeLock]);
+
+  const handleStopRecord = useCallback(() => {
+    setRecording(false);
+    setPaused(false);
+    releaseWakeLock();
+    if (pendingPathRef.current.length >= 2) {
+      setShowSaveDialog(true);
+    } else {
+      pendingPathRef.current = [];
+      setPath([]);
+      setTotalDistance(0);
+    }
+  }, [releaseWakeLock]);
 
   const handleLocate = useCallback(() => {
     startWatching();
@@ -192,7 +230,39 @@ export default function App() {
     setBacktracking(false);
     setBacktrackRoute(null);
     setBacktrackIndex(0);
+    setBacktrackArrived(false);
   }, []);
+
+  const handleSavePin = useCallback(() => {
+    if (!position) return;
+    const pin = [...position];
+    savePin(pin);
+    setCarPin(pin);
+  }, [position]);
+
+  const handleDeletePin = useCallback(() => {
+    deletePin();
+    setCarPin(null);
+  }, []);
+
+  const handleNavigatePin = useCallback(() => {
+    if (!carPin) return;
+    startWatching();
+    requestOrientationPermission();
+    // Create a simple single-point "route" for straight-line navigation
+    setBacktrackRoute([carPin]);
+    setBacktrackIndex(0);
+    setBacktracking(true);
+    setBacktrackArrived(false);
+    setViewPath(null);
+    setPath([]);
+
+    if (mapRef.current && position) {
+      mapRef.current.fitBounds([position, carPin], { padding: [80, 80] });
+    }
+  }, [carPin, position, startWatching, requestOrientationPermission]);
+
+  const carPinDistance = carPin && position ? getDistance(position, carPin) : null;
 
   const backtrackTarget = backtracking && backtrackRoute ? backtrackRoute[backtrackIndex] : null;
   const backtrackRemaining = backtracking && backtrackRoute
@@ -207,7 +277,10 @@ export default function App() {
         path={viewPath || (path.length >= 2 ? path : null)}
         backtrackPath={backtrackRemaining}
         backtrackTarget={backtrackTarget}
+        carPin={carPin}
         onMapReady={(map) => { mapRef.current = map; }}
+        autoFollow={autoFollow}
+        onAutoFollowChange={setAutoFollow}
       />
 
       <StatusBar
@@ -215,23 +288,34 @@ export default function App() {
         distance={totalDistance}
         points={path.length}
         duration={elapsed}
+        speed={speed}
+        carPinDistance={carPinDistance}
       />
 
-      {backtracking && backtrackTarget && (
+      {backtracking && (backtrackTarget || backtrackArrived) && (
         <BacktrackPanel
           position={position}
           heading={heading}
           targetPoint={backtrackTarget}
           remainingPath={backtrackRemaining}
           onStop={handleStopBacktrack}
+          currentIndex={backtrackIndex}
+          totalPoints={backtrackRoute ? backtrackRoute.length : 0}
+          arrived={backtrackArrived}
         />
       )}
 
       <Controls
         recording={recording}
+        paused={paused}
         onToggleRecord={handleToggleRecord}
+        onStopRecord={handleStopRecord}
         onLocate={handleLocate}
         onHistory={() => setShowHistory(true)}
+        carPin={carPin}
+        onSavePin={handleSavePin}
+        onNavigatePin={handleNavigatePin}
+        onDeletePin={handleDeletePin}
       />
 
       {showHistory && (

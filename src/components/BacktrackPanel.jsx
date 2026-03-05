@@ -8,6 +8,9 @@ export default function BacktrackPanel({
   targetPoint,
   remainingPath,
   onStop,
+  currentIndex,
+  totalPoints,
+  arrived,
 }) {
   const distToTarget = useMemo(() => {
     if (!position || !targetPoint) return null;
@@ -29,31 +32,50 @@ export default function BacktrackPanel({
     return bearing - heading;
   }, [position, targetPoint, heading]);
 
+  const progress = totalPoints > 0 ? (currentIndex / totalPoints) * 100 : 0;
+
   return (
     <div className={styles.panel}>
       <div className={styles.header}>
-        <span className={styles.title}>回溯导航中</span>
+        <span className={styles.title}>
+          {arrived ? '已到达目的地!' : '回溯导航中'}
+        </span>
         <button className={styles.stopBtn} onClick={onStop}>停止</button>
       </div>
-      <div className={styles.info}>
-        <div className={styles.compass}>
-          <div
-            className={styles.arrow}
-            style={{ transform: `rotate(${arrowRotation}deg)` }}
-          />
-        </div>
-        <div className={styles.details}>
-          <div className={styles.distance}>
-            距下一点: {distToTarget !== null ? formatDistance(distToTarget) : '--'}
-          </div>
-          <div className={styles.remaining}>
-            剩余路程: {formatDistance(remainingDist)}
-          </div>
-          {distToTarget !== null && distToTarget < 5 && (
-            <div className={styles.arrived}>已到达附近!</div>
-          )}
+      <div className={styles.progressRow}>
+        <span className={styles.progressText}>
+          进度: {currentIndex}/{totalPoints}
+        </span>
+        <div className={styles.progressBar}>
+          <div className={styles.progressFill} style={{ width: `${progress}%` }} />
         </div>
       </div>
+      {!arrived && (
+        <div className={styles.info}>
+          <div className={styles.compass}>
+            <div
+              className={styles.arrow}
+              style={{ transform: `rotate(${arrowRotation}deg)` }}
+            />
+          </div>
+          <div className={styles.details}>
+            <div className={styles.distance}>
+              距下一点: {distToTarget !== null ? formatDistance(distToTarget) : '--'}
+            </div>
+            <div className={styles.remaining}>
+              剩余路程: {formatDistance(remainingDist)}
+            </div>
+            {distToTarget !== null && distToTarget < 5 && (
+              <div className={styles.nearbyHint}>已到达附近!</div>
+            )}
+          </div>
+        </div>
+      )}
+      {arrived && (
+        <div className={styles.celebration}>
+          恭喜! 你已成功回溯到起点。
+        </div>
+      )}
     </div>
   );
 }

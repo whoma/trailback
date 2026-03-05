@@ -1,13 +1,19 @@
 import { formatDistance } from '../utils/geo';
 import styles from './StatusBar.module.css';
 
-export default function StatusBar({ accuracy, distance, points, duration }) {
+export default function StatusBar({ accuracy, distance, points, duration, speed, carPinDistance }) {
+  const speedKmh = speed != null ? (speed * 3.6).toFixed(1) : null;
+
   return (
     <div className={styles.bar}>
       <span>精度: {accuracy ? `${Math.round(accuracy)}m` : '--'}</span>
       <span>距离: {formatDistance(distance)}</span>
+      <span>速度: {speedKmh != null ? `${speedKmh} km/h` : '--'}</span>
       <span>点数: {points}</span>
       {duration > 0 && <span>时长: {formatDuration(duration)}</span>}
+      {carPinDistance != null && (
+        <span style={{ color: '#ef4444' }}>车位: {formatDistance(carPinDistance)}</span>
+      )}
     </div>
   );
 }

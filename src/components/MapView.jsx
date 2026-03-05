@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState, useCallback } from 'react';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 
@@ -37,7 +37,10 @@ export default function MapView({
   path,
   backtrackPath,
   backtrackTarget,
+  carPin,
   onMapReady,
+  autoFollow,
+  onAutoFollowChange,
 }) {
   const mapRef = useRef(null);
   const mapInstanceRef = useRef(null);
@@ -47,6 +50,11 @@ export default function MapView({
   const targetMarkerRef = useRef(null);
   const startMarkerRef = useRef(null);
   const accuracyCircleRef = useRef(null);
+  const tileLayerGroupRef = useRef(null);
+  const programmaticMoveRef = useRef(false);
+  const carPinMarkerRef = useRef(null);
+
+  const [isSatellite, setIsSatellite] = useState(false);
 
   // Initialize map
   useEffect(() => {
@@ -57,11 +65,21 @@ export default function MapView({
       attributionControl: false,
     }).setView([39.9, 116.4], 15);
 
-    // Use Gaode (AMap) tiles - better for China
-    L.tileLayer('https://webrd0{s}.is.autonavi.com/appmaptile?lang=zh_cn&size=1&scale=1&style=8&x={x}&y={y}&z={z}', {
+    // Normal tile layer (Gaode)
+    const normalLayer = L.tileLayer('https://webrd0{s}.is.autonavi.com/appmaptile?lang=zh_cn&size=1&scale=1&style=8&x={x}&y={y}&z={z}', {
       maxZoom: 18,
       subdomains: '1234',
-    }).addTo(map);
+    });
+
+    const layerGroup = L.layerGroup([normalLayer]).addTo(map);
+    tileLayerGroupRef.current = layerGroup;
+
+    // Detect user-initiated map drag to disable auto-follow
+    map.on('movestart', () => {
+      if (!programmaticMoveRef.current) {
+        onAutoFollowChange?.(false);
+      }
+    });
 
     mapInstanceRef.current = map;
     onMapReady?.(map);
@@ -72,7 +90,38 @@ export default function MapView({
     };
   }, []);
 
-  // Update current position marker with heading
+  // Toggle map layer between normal and satellite
+  const handleToggleLayer = useCallback(() => {
+    const group = tileLayerGroupRef.current;
+    if (!group) return;
+
+    group.clearLayers();
+
+    if (!isSatellite) {
+      // Switch to satellite + labels
+      const satLayer = L.tileLayer('https://webst0{s}.is.autonavi.com/appmaptile?style=6&x={x}&y={y}&z={z}', {
+        maxZoom: 18,
+        subdomains: '1234',
+      });
+      const labelLayer = L.tileLayer('https://webst0{s}.is.autonavi.com/appmaptile?style=8&x={x}&y={y}&z={z}', {
+        maxZoom: 18,
+        subdomains: '1234',
+      });
+      group.addLayer(satLayer);
+      group.addLayer(labelLayer);
+    } else {
+      // Switch to normal
+      const normalLayer = L.tileLayer('https://webrd0{s}.is.autonavi.com/appmaptile?lang=zh_cn&size=1&scale=1&style=8&x={x}&y={y}&z={z}', {
+        maxZoom: 18,
+        subdomains: '1234',
+      });
+      group.addLayer(normalLayer);
+    }
+
+    setIsSatellite(!isSatellite);
+  }, [isSatellite]);
+
+  // Update current position marker with heading + auto-follow
   useEffect(() => {
     const map = mapInstanceRef.current;
     if (!map || !position) return;
@@ -81,12 +130,20 @@ export default function MapView({
 
     if (!markerRef.current) {
       markerRef.current = L.marker(position, { icon, zIndexOffset: 1000 }).addTo(map);
+      programmaticMoveRef.current = true;
       map.setView(position, 16);
+      setTimeout(() => { programmaticMoveRef.current = false; }, 300);
     } else {
       markerRef.current.setLatLng(position);
       markerRef.current.setIcon(icon);
+
+      if (autoFollow) {
+        programmaticMoveRef.current = true;
+        map.setView(position, map.getZoom(), { animate: true });
+        setTimeout(() => { programmaticMoveRef.current = false; }, 300);
+      }
     }
-  }, [position, heading]);
+  }, [position, heading, autoFollow]);
 
   // Update recorded path
   useEffect(() => {
@@ -166,5 +223,107 @@ export default function MapView({
     }
   }, [backtrackPath, backtrackTarget]);
 
-  return <div ref={mapRef} style={{ width: '100%', height: '100%' }} />;
+  // Update car pin marker
+  useEffect(() => {
+    const map = mapInstanceRef.current;
+    if (!map) return;
+
+    if (carPinMarkerRef.current) {
+      map.removeLayer(carPinMarkerRef.current);
+      carPinMarkerRef.current = null;
+    }
+
+    if (carPin) {
+      const pinIcon = L.divIcon({
+        className: '',
+        html: `<div style="
+          display:flex;align-items:center;justify-content:center;
+          width:32px;height:32px;
+          background:#ef4444;
+          border:3px solid white;
+          border-radius:50%;
+          box-shadow:0 2px 8px rgba(239,68,68,0.5);
+          font-size:16px;font-weight:bold;color:white;
+        ">P</div>`,
+        iconSize: [32, 32],
+        iconAnchor: [16, 16],
+      });
+      carPinMarkerRef.current = L.marker(carPin, { icon: pinIcon, zIndexOffset: 900 }).addTo(map);
+    }
+  }, [carPin]);
+
+  const btnStyle = {
+    width: 40,
+    height: 40,
+    borderRadius: 8,
+    border: 'none',
+    background: 'white',
+    boxShadow: '0 2px 6px rgba(0,0,0,0.25)',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    cursor: 'pointer',
+    fontSize: 18,
+  };
+
+  return (
+    <div style={{ width: '100%', height: '100%', position: 'relative' }}>
+      <div ref={mapRef} style={{ width: '100%', height: '100%' }} />
+
+      {/* Layer toggle button - top right */}
+      <button
+        onClick={handleToggleLayer}
+        style={{
+          ...btnStyle,
+          position: 'absolute',
+          top: 12,
+          right: 12,
+          zIndex: 1000,
+        }}
+        title={isSatellite ? '切换普通地图' : '切换卫星地图'}
+      >
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#333" strokeWidth="2">
+          {isSatellite ? (
+            // Map icon (switch to normal)
+            <>
+              <polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6" />
+              <line x1="8" y1="2" x2="8" y2="18" />
+              <line x1="16" y1="6" x2="16" y2="22" />
+            </>
+          ) : (
+            // Satellite/globe icon (switch to satellite)
+            <>
+              <circle cx="12" cy="12" r="10" />
+              <ellipse cx="12" cy="12" rx="4" ry="10" />
+              <line x1="2" y1="12" x2="22" y2="12" />
+            </>
+          )}
+        </svg>
+      </button>
+
+      {/* Auto-follow button - right side, below layer toggle */}
+      <button
+        onClick={() => onAutoFollowChange?.(!autoFollow)}
+        style={{
+          ...btnStyle,
+          position: 'absolute',
+          top: 62,
+          right: 12,
+          zIndex: 1000,
+          background: autoFollow ? '#4f6df5' : 'white',
+          color: autoFollow ? 'white' : '#333',
+        }}
+        title={autoFollow ? '关闭跟随' : '开启跟随'}
+      >
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={autoFollow ? 'white' : '#333'} strokeWidth="2">
+          <path d="M12 2L12 6" />
+          <path d="M12 18L12 22" />
+          <path d="M2 12L6 12" />
+          <path d="M18 12L22 12" />
+          <circle cx="12" cy="12" r="4" />
+          {autoFollow && <circle cx="12" cy="12" r="1.5" fill={autoFollow ? 'white' : '#333'} stroke="none" />}
+        </svg>
+      </button>
+    </div>
+  );
 }

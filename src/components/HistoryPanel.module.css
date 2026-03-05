@@ -69,6 +69,7 @@
 
 .actions {
   display: flex;
+  flex-wrap: wrap;
   gap: 8px;
   margin-top: 10px;
 }
@@ -90,7 +91,21 @@
   background: var(--success);
 }
 
+.exportBtn {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.shareBtn {
+  background: rgba(79, 109, 245, 0.3);
+}
+
 .deleteBtn {
   background: rgba(239, 68, 68, 0.2);
   color: var(--danger) !important;
+}
+
+.stats {
+  margin-top: 2px;
+  font-size: 12px;
+  color: var(--text-dim);
 }

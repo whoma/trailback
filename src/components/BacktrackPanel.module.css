@@ -76,11 +76,48 @@
   font-size: 13px;
 }
 
-.arrived {
+.nearbyHint {
   color: var(--success);
   font-weight: 600;
   font-size: 14px;
   animation: blink 1s infinite;
+}
+
+.progressRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.progressText {
+  font-size: 13px;
+  color: var(--text-dim);
+  white-space: nowrap;
+}
+
+.progressBar {
+  flex: 1;
+  height: 6px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.progressFill {
+  height: 100%;
+  background: var(--success);
+  border-radius: 3px;
+  transition: width 0.4s ease;
+}
+
+.celebration {
+  text-align: center;
+  font-size: 16px;
+  color: var(--success);
+  font-weight: 600;
+  padding: 16px 0;
+  animation: blink 1.2s infinite;
 }
 
 @keyframes blink {

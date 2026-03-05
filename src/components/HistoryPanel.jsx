@@ -1,7 +1,49 @@
+import { useCallback } from 'react';
 import { formatDistance, formatTime } from '../utils/geo';
 import styles from './HistoryPanel.module.css';
 
+function generateGPX(route) {
+  const trkpts = route.points
+    .map((p) => `      <trkpt lat="${p[0]}" lon="${p[1]}"/>`)
+    .join('\n');
+  return `<?xml version="1.0" encoding="UTF-8"?>
+<gpx version="1.1" creator="Trailback">
+  <trk><name>${route.name}</name><trkseg>
+${trkpts}
+  </trkseg></trk>
+</gpx>`;
+}
+
+function formatAvgSpeed(distance, duration) {
+  if (!duration || duration <= 0) return '--';
+  const speedMs = distance / (duration / 1000);
+  const speedKmh = speedMs * 3.6;
+  if (speedKmh < 1) return `${speedMs.toFixed(1)}m/s`;
+  return `${speedKmh.toFixed(1)}km/h`;
+}
+
 export default function HistoryPanel({ routes, onClose, onBacktrack, onView, onDelete }) {
+  const handleExport = useCallback((route) => {
+    const gpx = generateGPX(route);
+    const blob = new Blob([gpx], { type: 'application/gpx+xml' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${route.name}.gpx`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }, []);
+
+  const handleShare = useCallback(async (route) => {
+    const gpx = generateGPX(route);
+    const file = new File([gpx], `${route.name}.gpx`, { type: 'application/gpx+xml' });
+    try {
+      await navigator.share({ title: route.name, files: [file] });
+    } catch {
+      // User cancelled or share not supported
+    }
+  }, []);
+
   return (
     <div className={styles.panel}>
       <div className={styles.header}>
@@ -21,10 +63,18 @@ export default function HistoryPanel({ routes, onClose, onBacktrack, onView, onD
                   {formatDistance(route.distance)} |{' '}
                   {route.points.length}个点
                 </p>
+                <p className={styles.stats}>
+                  {route.duration ? `时长: ${formatTime(route.duration)}` : ''}
+                  {route.duration ? ` | 均速: ${formatAvgSpeed(route.distance, route.duration)}` : ''}
+                </p>
               </div>
               <div className={styles.actions}>
                 <button className={styles.viewBtn} onClick={() => onView(route)}>查看</button>
                 <button className={styles.backtrackBtn} onClick={() => onBacktrack(route)}>回溯</button>
+                <button className={styles.exportBtn} onClick={() => handleExport(route)}>导出</button>
+                {navigator.share && (
+                  <button className={styles.shareBtn} onClick={() => handleShare(route)}>分享</button>
+                )}
                 <button className={styles.deleteBtn} onClick={() => onDelete(route.id)}>删除</button>
               </div>
             </div>
