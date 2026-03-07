@@ -1,6 +1,18 @@
 import { useMemo } from 'react';
 import { getDistance, getBearing, formatDistance } from '../utils/geo';
 import styles from './BacktrackPanel.module.css';
+import type { LatLng } from '../types';
+
+interface BacktrackPanelProps {
+  position: LatLng | null;
+  heading: number | null;
+  targetPoint: LatLng | null;
+  remainingPath: LatLng[] | null;
+  onStop: () => void;
+  currentIndex: number;
+  totalPoints: number;
+  arrived: boolean;
+}
 
 export default function BacktrackPanel({
   position,
@@ -11,7 +23,7 @@ export default function BacktrackPanel({
   currentIndex,
   totalPoints,
   arrived,
-}) {
+}: BacktrackPanelProps) {
   const distToTarget = useMemo(() => {
     if (!position || !targetPoint) return null;
     return getDistance(position, targetPoint);

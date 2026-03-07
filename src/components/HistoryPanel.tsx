@@ -1,8 +1,10 @@
 import { useCallback } from 'react';
 import { formatDistance, formatTime } from '../utils/geo';
+import { vibrate } from '../utils/vibrate';
 import styles from './HistoryPanel.module.css';
+import type { Route } from '../types';
 
-function generateGPX(route) {
+function generateGPX(route: Route): string {
   const trkpts = route.points
     .map((p) => `      <trkpt lat="${p[0]}" lon="${p[1]}"/>`)
     .join('\n');
@@ -14,7 +16,7 @@ ${trkpts}
 </gpx>`;
 }
 
-function formatAvgSpeed(distance, duration) {
+function formatAvgSpeed(distance: number, duration: number): string {
   if (!duration || duration <= 0) return '--';
   const speedMs = distance / (duration / 1000);
   const speedKmh = speedMs * 3.6;
@@ -22,8 +24,17 @@ function formatAvgSpeed(distance, duration) {
   return `${speedKmh.toFixed(1)}km/h`;
 }
 
-export default function HistoryPanel({ routes, onClose, onBacktrack, onView, onDelete }) {
-  const handleExport = useCallback((route) => {
+interface HistoryPanelProps {
+  routes: Route[];
+  onClose: () => void;
+  onBacktrack: (route: Route) => void;
+  onView: (route: Route) => void;
+  onDelete: (id: string) => void;
+}
+
+export default function HistoryPanel({ routes, onClose, onBacktrack, onView, onDelete }: HistoryPanelProps) {
+  const handleExport = useCallback((route: Route) => {
+    vibrate(15);
     const gpx = generateGPX(route);
     const blob = new Blob([gpx], { type: 'application/gpx+xml' });
     const url = URL.createObjectURL(blob);
@@ -34,7 +45,8 @@ export default function HistoryPanel({ routes, onClose, onBacktrack, onView, onD
     URL.revokeObjectURL(url);
   }, []);
 
-  const handleShare = useCallback(async (route) => {
+  const handleShare = useCallback(async (route: Route) => {
+    vibrate(15);
     const gpx = generateGPX(route);
     const file = new File([gpx], `${route.name}.gpx`, { type: 'application/gpx+xml' });
     try {
@@ -69,13 +81,13 @@ export default function HistoryPanel({ routes, onClose, onBacktrack, onView, onD
                 </p>
               </div>
               <div className={styles.actions}>
-                <button className={styles.viewBtn} onClick={() => onView(route)}>查看</button>
-                <button className={styles.backtrackBtn} onClick={() => onBacktrack(route)}>回溯</button>
+                <button className={styles.viewBtn} onClick={() => { vibrate(15); onView(route); }}>查看</button>
+                <button className={styles.backtrackBtn} onClick={() => { vibrate(25); onBacktrack(route); }}>回溯</button>
                 <button className={styles.exportBtn} onClick={() => handleExport(route)}>导出</button>
                 {navigator.share && (
                   <button className={styles.shareBtn} onClick={() => handleShare(route)}>分享</button>
                 )}
-                <button className={styles.deleteBtn} onClick={() => onDelete(route.id)}>删除</button>
+                <button className={styles.deleteBtn} onClick={() => { vibrate([30, 20, 30]); onDelete(route.id); }}>删除</button>
               </div>
             </div>
           ))

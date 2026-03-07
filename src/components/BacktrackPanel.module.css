@@ -6,7 +6,7 @@
   z-index: 1000;
   background: var(--bg-panel);
   border-radius: var(--radius);
-  padding: 16px;
+  padding: 18px;
   backdrop-filter: blur(10px);
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
 }
@@ -15,11 +15,11 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 12px;
+  margin-bottom: 14px;
 }
 
 .title {
-  font-size: 16px;
+  font-size: 18px;
   font-weight: 600;
   color: var(--success);
 }
@@ -28,9 +28,9 @@
   background: var(--danger);
   color: white;
   border: none;
-  padding: 6px 14px;
-  border-radius: 8px;
-  font-size: 13px;
+  padding: 8px 18px;
+  border-radius: 10px;
+  font-size: 14px;
   cursor: pointer;
 }
 
@@ -41,11 +41,11 @@
 }
 
 .compass {
-  width: 64px;
-  height: 64px;
+  width: 80px;
+  height: 80px;
   border-radius: 50%;
   background: rgba(79, 109, 245, 0.15);
-  border: 2px solid var(--primary);
+  border: 2.5px solid var(--primary);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -55,31 +55,31 @@
 .arrow {
   width: 0;
   height: 0;
-  border-left: 10px solid transparent;
-  border-right: 10px solid transparent;
-  border-bottom: 28px solid var(--primary);
+  border-left: 13px solid transparent;
+  border-right: 13px solid transparent;
+  border-bottom: 36px solid var(--primary);
   transition: transform 0.3s ease;
 }
 
 .details {
-  font-size: 15px;
+  font-size: 16px;
   line-height: 1.8;
 }
 
 .distance {
   font-weight: 600;
-  font-size: 18px;
+  font-size: 20px;
 }
 
 .remaining {
   color: var(--text-dim);
-  font-size: 13px;
+  font-size: 14px;
 }
 
 .nearbyHint {
   color: var(--success);
   font-weight: 600;
-  font-size: 14px;
+  font-size: 16px;
   animation: blink 1s infinite;
 }
 
@@ -87,36 +87,36 @@
   display: flex;
   align-items: center;
   gap: 10px;
-  margin-bottom: 12px;
+  margin-bottom: 14px;
 }
 
 .progressText {
-  font-size: 13px;
+  font-size: 14px;
   color: var(--text-dim);
   white-space: nowrap;
 }
 
 .progressBar {
   flex: 1;
-  height: 6px;
+  height: 8px;
   background: rgba(255, 255, 255, 0.1);
-  border-radius: 3px;
+  border-radius: 4px;
   overflow: hidden;
 }
 
 .progressFill {
   height: 100%;
   background: var(--success);
-  border-radius: 3px;
+  border-radius: 4px;
   transition: width 0.4s ease;
 }
 
 .celebration {
   text-align: center;
-  font-size: 16px;
+  font-size: 18px;
   color: var(--success);
   font-weight: 600;
-  padding: 16px 0;
+  padding: 18px 0;
   animation: blink 1.2s infinite;
 }
 

@@ -1,7 +1,16 @@
 import { formatDistance } from '../utils/geo';
 import styles from './StatusBar.module.css';
 
-export default function StatusBar({ accuracy, distance, points, duration, speed, carPinDistance }) {
+interface StatusBarProps {
+  accuracy: number | null;
+  distance: number;
+  points: number;
+  duration: number;
+  speed: number | null;
+  carPinDistance: number | null;
+}
+
+export default function StatusBar({ accuracy, distance, points, duration, speed, carPinDistance }: StatusBarProps) {
   const speedKmh = speed != null ? (speed * 3.6).toFixed(1) : null;
 
   return (
@@ -18,7 +27,7 @@ export default function StatusBar({ accuracy, distance, points, duration, speed,
   );
 }
 
-function formatDuration(ms) {
+function formatDuration(ms: number): string {
   const s = Math.floor(ms / 1000);
   const m = Math.floor(s / 60);
   const h = Math.floor(m / 60);

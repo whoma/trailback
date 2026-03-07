@@ -19,17 +19,17 @@
 }
 
 .header h2 {
-  font-size: 20px;
+  font-size: 22px;
 }
 
 .closeBtn {
-  width: 36px;
-  height: 36px;
+  width: 40px;
+  height: 40px;
   border-radius: 50%;
   border: none;
   background: rgba(255, 255, 255, 0.08);
   color: var(--text);
-  font-size: 20px;
+  font-size: 24px;
   cursor: pointer;
   display: flex;
   align-items: center;
@@ -47,23 +47,23 @@
   text-align: center;
   color: var(--text-dim);
   padding: 40px 0;
-  font-size: 14px;
+  font-size: 15px;
 }
 
 .item {
   background: var(--bg-card);
-  border-radius: 12px;
-  padding: 14px 16px;
+  border-radius: 14px;
+  padding: 16px 18px;
   margin-bottom: 12px;
 }
 
 .itemInfo h3 {
-  font-size: 15px;
+  font-size: 16px;
   margin-bottom: 4px;
 }
 
 .itemInfo p {
-  font-size: 12px;
+  font-size: 13px;
   color: var(--text-dim);
 }
 
@@ -71,14 +71,14 @@
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
-  margin-top: 10px;
+  margin-top: 12px;
 }
 
 .actions button {
-  padding: 8px 14px;
-  border-radius: 8px;
+  padding: 10px 16px;
+  border-radius: 10px;
   border: none;
-  font-size: 12px;
+  font-size: 13px;
   cursor: pointer;
   color: white;
 }

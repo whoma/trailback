@@ -1,7 +1,12 @@
 import { useRef, useCallback } from 'react';
 
-export function useWakeLock() {
-  const wakeLockRef = useRef(null);
+interface WakeLockState {
+  requestWakeLock: () => Promise<void>;
+  releaseWakeLock: () => Promise<void>;
+}
+
+export function useWakeLock(): WakeLockState {
+  const wakeLockRef = useRef<WakeLockSentinel | null>(null);
 
   const requestWakeLock = useCallback(async () => {
     if (!('wakeLock' in navigator)) return;

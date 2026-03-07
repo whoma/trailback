@@ -1,7 +1,9 @@
+import type { LatLng } from '../types';
+
 // Haversine distance between two [lat, lng] points in meters
-export function getDistance(p1, p2) {
+export function getDistance(p1: LatLng, p2: LatLng): number {
   const R = 6371000;
-  const toRad = (d) => (d * Math.PI) / 180;
+  const toRad = (d: number) => (d * Math.PI) / 180;
   const dLat = toRad(p2[0] - p1[0]);
   const dLng = toRad(p2[1] - p1[1]);
   const a =
@@ -11,7 +13,7 @@ export function getDistance(p1, p2) {
 }
 
 // Total distance of a path (array of [lat, lng])
-export function getTotalDistance(path) {
+export function getTotalDistance(path: LatLng[]): number {
   let total = 0;
   for (let i = 1; i < path.length; i++) {
     total += getDistance(path[i - 1], path[i]);
@@ -20,9 +22,9 @@ export function getTotalDistance(path) {
 }
 
 // Bearing from p1 to p2 in degrees (0 = north, clockwise)
-export function getBearing(p1, p2) {
-  const toRad = (d) => (d * Math.PI) / 180;
-  const toDeg = (r) => (r * 180) / Math.PI;
+export function getBearing(p1: LatLng, p2: LatLng): number {
+  const toRad = (d: number) => (d * Math.PI) / 180;
+  const toDeg = (r: number) => (r * 180) / Math.PI;
   const dLng = toRad(p2[1] - p1[1]);
   const y = Math.sin(dLng) * Math.cos(toRad(p2[0]));
   const x =
@@ -31,12 +33,12 @@ export function getBearing(p1, p2) {
   return (toDeg(Math.atan2(y, x)) + 360) % 360;
 }
 
-export function formatDistance(meters) {
+export function formatDistance(meters: number): string {
   if (meters < 1000) return `${Math.round(meters)}m`;
   return `${(meters / 1000).toFixed(2)}km`;
 }
 
-export function formatTime(ms) {
+export function formatTime(ms: number): string {
   const s = Math.floor(ms / 1000);
   const m = Math.floor(s / 60);
   const h = Math.floor(m / 60);

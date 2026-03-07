@@ -8,11 +8,13 @@ import SaveDialog from './components/SaveDialog';
 import { useGeolocation } from './hooks/useGeolocation';
 import { useWakeLock } from './hooks/useWakeLock';
 import { getDistance, getTotalDistance } from './utils/geo';
+import { vibrate } from './utils/vibrate';
 import { getSavedRoutes, saveRoute, deleteRoute, getSavedPin, savePin, deletePin } from './utils/storage';
+import type { LatLng, Route } from './types';
 import './App.css';
 
-const MIN_DISTANCE = 3; // minimum meters between recorded points
-const BACKTRACK_ARRIVE_DISTANCE = 8; // meters to consider "arrived" at waypoint
+const MIN_DISTANCE = 3;
+const BACKTRACK_ARRIVE_DISTANCE = 8;
 
 export default function App() {
   const {
@@ -29,34 +31,29 @@ export default function App() {
 
   const [recording, setRecording] = useState(false);
   const [paused, setPaused] = useState(false);
-  const [path, setPath] = useState([]);
+  const [path, setPath] = useState<LatLng[]>([]);
   const [totalDistance, setTotalDistance] = useState(0);
-  const [startTime, setStartTime] = useState(null);
+  const [startTime, setStartTime] = useState<number | null>(null);
   const [elapsed, setElapsed] = useState(0);
   const [elapsedAtPause, setElapsedAtPause] = useState(0);
 
   const [showHistory, setShowHistory] = useState(false);
   const [showSaveDialog, setShowSaveDialog] = useState(false);
-  const [routes, setRoutes] = useState(() => getSavedRoutes());
+  const [routes, setRoutes] = useState<Route[]>(() => getSavedRoutes());
 
   const [backtracking, setBacktracking] = useState(false);
-  const [backtrackRoute, setBacktrackRoute] = useState(null);
+  const [backtrackRoute, setBacktrackRoute] = useState<LatLng[] | null>(null);
   const [backtrackIndex, setBacktrackIndex] = useState(0);
   const [backtrackArrived, setBacktrackArrived] = useState(false);
 
-  // View-only mode (show a saved route on map)
-  const [viewPath, setViewPath] = useState(null);
-
-  // Auto-follow mode
+  const [viewPath, setViewPath] = useState<LatLng[] | null>(null);
   const [autoFollow, setAutoFollow] = useState(false);
+  const [carPin, setCarPin] = useState<LatLng | null>(() => getSavedPin());
 
-  // Car pin
-  const [carPin, setCarPin] = useState(() => getSavedPin());
+  const mapRef = useRef<L.Map | null>(null);
+  const pendingPathRef = useRef<LatLng[]>([]);
 
-  const mapRef = useRef(null);
-  const pendingPathRef = useRef([]);
-
-  // Timer for elapsed time (pauses when paused)
+  // Timer for elapsed time
   useEffect(() => {
     if (!recording || paused || !startTime) return;
     const interval = setInterval(() => {
@@ -65,7 +62,7 @@ export default function App() {
     return () => clearInterval(interval);
   }, [recording, paused, startTime, elapsedAtPause]);
 
-  // Record positions into path (skip when paused)
+  // Record positions into path
   useEffect(() => {
     if (!recording || paused || !position) return;
 
@@ -95,12 +92,10 @@ export default function App() {
     const dist = getDistance(position, target);
     if (dist < BACKTRACK_ARRIVE_DISTANCE) {
       if (backtrackIndex < backtrackRoute.length - 1) {
-        // Reached intermediate waypoint - short vibration
-        if (navigator.vibrate) navigator.vibrate(200);
+        vibrate(200);
         setBacktrackIndex((i) => i + 1);
       } else {
-        // Reached final destination - celebration vibration
-        if (navigator.vibrate) navigator.vibrate([200, 100, 200, 100, 400]);
+        vibrate([200, 100, 200, 100, 400]);
         setBacktrackArrived(true);
       }
     }
@@ -118,16 +113,16 @@ export default function App() {
   const handleToggleRecord = useCallback(() => {
     if (recording) {
       if (paused) {
-        // Resume recording
+        vibrate(25);
         setPaused(false);
         setStartTime(Date.now());
       } else {
-        // Pause recording
+        vibrate([20, 15, 20]);
         setPaused(true);
         setElapsedAtPause(elapsed);
       }
     } else {
-      // Start recording
+      vibrate(40);
       startWatching();
       requestOrientationPermission();
       requestWakeLock();
@@ -166,8 +161,8 @@ export default function App() {
   }, [position, startWatching, requestOrientationPermission]);
 
   const handleSave = useCallback(
-    (name) => {
-      const route = {
+    (name: string) => {
+      const route: Route = {
         id: Date.now().toString(),
         name,
         points: pendingPathRef.current,
@@ -192,27 +187,26 @@ export default function App() {
     setTotalDistance(0);
   }, []);
 
-  const handleDelete = useCallback((id) => {
+  const handleDelete = useCallback((id: string) => {
     deleteRoute(id);
     setRoutes(getSavedRoutes());
   }, []);
 
-  const handleView = useCallback((route) => {
+  const handleView = useCallback((route: Route) => {
     setShowHistory(false);
     setViewPath(route.points);
     if (mapRef.current && route.points.length > 0) {
-      const bounds = route.points.map((p) => p);
-      mapRef.current.fitBounds(bounds, { padding: [50, 50] });
+      mapRef.current.fitBounds(route.points, { padding: [50, 50] });
     }
   }, []);
 
   const handleBacktrack = useCallback(
-    (route) => {
+    (route: Route) => {
+      vibrate(40);
       startWatching();
       requestOrientationPermission();
       setShowHistory(false);
-      // Reverse the path so we walk back
-      const reversed = [...route.points].reverse();
+      const reversed: LatLng[] = [...route.points].reverse();
       setBacktrackRoute(reversed);
       setBacktrackIndex(0);
       setBacktracking(true);
@@ -227,6 +221,7 @@ export default function App() {
   );
 
   const handleStopBacktrack = useCallback(() => {
+    vibrate([30, 20, 30]);
     setBacktracking(false);
     setBacktrackRoute(null);
     setBacktrackIndex(0);
@@ -235,21 +230,23 @@ export default function App() {
 
   const handleSavePin = useCallback(() => {
     if (!position) return;
-    const pin = [...position];
+    vibrate(30);
+    const pin: LatLng = [...position] as LatLng;
     savePin(pin);
     setCarPin(pin);
   }, [position]);
 
   const handleDeletePin = useCallback(() => {
+    vibrate([30, 20, 30]);
     deletePin();
     setCarPin(null);
   }, []);
 
   const handleNavigatePin = useCallback(() => {
     if (!carPin) return;
+    vibrate(30);
     startWatching();
     requestOrientationPermission();
-    // Create a simple single-point "route" for straight-line navigation
     setBacktrackRoute([carPin]);
     setBacktrackIndex(0);
     setBacktracking(true);

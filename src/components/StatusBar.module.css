@@ -8,8 +8,8 @@
   background: linear-gradient(to bottom, rgba(26, 26, 46, 0.9), transparent);
   pointer-events: none;
   display: flex;
-  gap: 12px;
-  font-size: 12px;
+  gap: 10px;
+  font-size: 13px;
   color: var(--text-dim);
   justify-content: center;
   flex-wrap: wrap;
@@ -17,7 +17,7 @@
 
 .bar span {
   background: rgba(22, 33, 62, 0.8);
-  padding: 4px 10px;
+  padding: 5px 12px;
   border-radius: 12px;
   backdrop-filter: blur(10px);
 }

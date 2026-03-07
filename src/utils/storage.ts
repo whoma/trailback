@@ -1,7 +1,9 @@
+import type { LatLng, Route } from '../types';
+
 const ROUTES_KEY = 'pathtracer_routes';
 const PIN_KEY = 'pathtracer_pin';
 
-export function getSavedRoutes() {
+export function getSavedRoutes(): Route[] {
   try {
     const data = localStorage.getItem(ROUTES_KEY);
     return data ? JSON.parse(data) : [];
@@ -10,18 +12,18 @@ export function getSavedRoutes() {
   }
 }
 
-export function saveRoute(route) {
+export function saveRoute(route: Route): void {
   const routes = getSavedRoutes();
   routes.unshift(route);
   localStorage.setItem(ROUTES_KEY, JSON.stringify(routes));
 }
 
-export function deleteRoute(id) {
+export function deleteRoute(id: string): void {
   const routes = getSavedRoutes().filter((r) => r.id !== id);
   localStorage.setItem(ROUTES_KEY, JSON.stringify(routes));
 }
 
-export function getSavedPin() {
+export function getSavedPin(): LatLng | null {
   try {
     const data = localStorage.getItem(PIN_KEY);
     return data ? JSON.parse(data) : null;
@@ -30,10 +32,10 @@ export function getSavedPin() {
   }
 }
 
-export function savePin(pin) {
+export function savePin(pin: LatLng): void {
   localStorage.setItem(PIN_KEY, JSON.stringify(pin));
 }
 
-export function deletePin() {
+export function deletePin(): void {
   localStorage.removeItem(PIN_KEY);
 }

@@ -1,13 +1,25 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
+import type { LatLng } from '../types';
 
-export function useGeolocation() {
-  const [position, setPosition] = useState(null);
-  const [accuracy, setAccuracy] = useState(null);
-  const [error, setError] = useState(null);
-  const [heading, setHeading] = useState(null);
-  const [speed, setSpeed] = useState(null);
-  const watchIdRef = useRef(null);
-  const orientationListenerRef = useRef(null);
+interface GeolocationState {
+  position: LatLng | null;
+  accuracy: number | null;
+  error: string | null;
+  heading: number | null;
+  speed: number | null;
+  startWatching: () => void;
+  stopWatching: () => void;
+  requestOrientationPermission: () => Promise<void>;
+}
+
+export function useGeolocation(): GeolocationState {
+  const [position, setPosition] = useState<LatLng | null>(null);
+  const [accuracy, setAccuracy] = useState<number | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [heading, setHeading] = useState<number | null>(null);
+  const [speed, setSpeed] = useState<number | null>(null);
+  const watchIdRef = useRef<number | null>(null);
+  const orientationListenerRef = useRef<((e: DeviceOrientationEvent) => void) | null>(null);
 
   const startWatching = useCallback(() => {
     if (!navigator.geolocation) {
@@ -48,16 +60,16 @@ export function useGeolocation() {
   }, []);
 
   useEffect(() => {
-    const handleOrientation = (e) => {
-      if (e.webkitCompassHeading !== undefined) {
-        setHeading(e.webkitCompassHeading);
+    const handleOrientation = (e: DeviceOrientationEvent) => {
+      if ((e as any).webkitCompassHeading !== undefined) {
+        setHeading((e as any).webkitCompassHeading);
       } else if (e.alpha !== null) {
         setHeading((360 - e.alpha) % 360);
       }
     };
 
     if (typeof DeviceOrientationEvent !== 'undefined' &&
-        typeof DeviceOrientationEvent.requestPermission === 'function') {
+        typeof (DeviceOrientationEvent as any).requestPermission === 'function') {
       // iOS - will be requested on user gesture
     } else {
       window.addEventListener('deviceorientation', handleOrientation);
@@ -73,13 +85,13 @@ export function useGeolocation() {
 
   const requestOrientationPermission = useCallback(async () => {
     if (typeof DeviceOrientationEvent !== 'undefined' &&
-        typeof DeviceOrientationEvent.requestPermission === 'function') {
+        typeof (DeviceOrientationEvent as any).requestPermission === 'function') {
       try {
-        const permission = await DeviceOrientationEvent.requestPermission();
+        const permission = await (DeviceOrientationEvent as any).requestPermission();
         if (permission === 'granted') {
-          const handler = (e) => {
-            if (e.webkitCompassHeading !== undefined) {
-              setHeading(e.webkitCompassHeading);
+          const handler = (e: DeviceOrientationEvent) => {
+            if ((e as any).webkitCompassHeading !== undefined) {
+              setHeading((e as any).webkitCompassHeading);
             } else if (e.alpha !== null) {
               setHeading((360 - e.alpha) % 360);
             }
